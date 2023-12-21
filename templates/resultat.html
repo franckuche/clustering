@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Résultats de Clustering</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            color: #37474F;
+            background-color: #F5F5F5;
+        }
+
+        .sidebar {
+            background-color: #546E7A;
+            width: 20%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding-top: 50px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .sidebar a {
+            text-decoration: none;
+            display: block;
+            margin: 10px 20px;
+            color: #fff;
+            transition: background-color 0.3s ease;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .sidebar a:hover {
+            background-color: #2d3e50;
+        }
+
+        .sidebar i {
+            margin-right: 10px;
+        }
+
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            background-color: #FFFFFF;
+            margin-left: 20%;
+            padding: 1rem;
+            min-height: 100vh;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .table-box {
+            width: 48%;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            background-color: #FFFFFF;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: bold;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            border: 1px solid #000;
+        }
+
+        table, th, td {
+            border: none;
+            text-align: center;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        thead {
+            color: black;
+            background-color: #546E7A;
+            color: white;
+            padding: 10px;
+            border-radius: 8px 8px 8px 8px;
+            text-align: center;
+        }
+
+        .total-row {
+            font-weight: bold;
+        }
+
+        .center-button {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .center-button button {
+            padding: 10px 20px;
+            background-color: #546E7A;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .header h1 {
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .export-btn {
+            background-color: #546E7A;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px; /* Ajustez selon vos besoins */
+    width: 100%;
+    margin : 5%;
+} 
+
+.title{
+    text-align: center;
+}
+    </style>
+</head>
+<body>
+    <aside id="menu" class="sidebar">
+        <nav>
+            <a href="/clustering" class="block p-2.5 text-white transition duration-200 rounded hover:bg-gray-700"><i
+                    class="fas fa-chart-pie"></i> Clusterings</a>
+            <a href="/historique" class="block p-2.5 text-white transition duration-200 rounded hover:bg-gray-700"><i
+                    class="fas fa-history"></i> Historique</a>
+            <a href="#" class="block p-2.5 text-white transition duration-200 rounded hover:bg-gray-700"><i
+                    class="fas fa-question-circle"></i> Aide</a>
+        </nav>
+    </aside>
+
+    <div class="content">
+        <div class="header-container">
+            <h1 class="title">Historique des Clusters</h1>
+            <div class="button-container">
+                <!--<a href="/export_csv" class="export-btn">Exporter en CSV</a>-->
+            </div>
+        </div>
+        <div>
+            <pre>{{ clusters_json }}</pre>
+        </div>
+        {% for cluster in clusters %}
+        <div class="table-box">
+            <p>Cluster {{ loop.index }} : {{ cluster.name.capitalize() }}</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="3">Mot-clé</th>
+                        <th>Volume</th>
+                        <th>% Similarité</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for keyword_data in cluster.keywords %}
+                    <tr>
+                        <td colspan="3">{{ keyword_data[0] }}</td>
+                        <td>{{ keyword_data[1] }}</td>
+                        <td>{{ keyword_data[2] * 100 | round(2) }} %</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="4">Total</td>
+                        <td>{{ cluster.total_volume }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="center-button">
+                <button><a href="/resultat/detail/{{ loop.index }}"
+                        style="text-decoration: none; color: inherit;">Voir Détail</a></button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
