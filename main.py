@@ -104,21 +104,21 @@ async def search_volume(request: Request, keywords: str = Form(...), location_co
     for cluster in cluster_results:
         print(f"Cluster: {cluster['name']}")
         for keyword_data in cluster['keywords']:
-            print(f"  Mot-clé: {keyword_data[0]}, Volume: {keyword_data[1]}, Similarité: ???")  # Ajustez en fonction de votre structure de données
-        print(f"  Volume total: {cluster['total_volume']}")
+            print(f"  Mot-clé: {keyword_data['keyword']}, Volume: {keyword_data['volume']}, Similarité: {keyword_data['similarity'] * 100:.2f}%")
+            print(f"  Volume total: {cluster['total_volume']}")
 
     # Passez les résultats de clustering au modèle HTML
     return templates.TemplateResponse("resultat.html", {"request": request, "clusters": cluster_results})
 
-def cluster_keywords(keywords_responses):
+def cluster_keywords(keyword_responses):
     clusters = []
-    for i, keyword_data in enumerate(keywords_responses):
+    for keyword_data in keyword_responses:
         keyword = keyword_data['keyword']
         urls = keyword_data['urls']
         volume = keyword_data['volume'] if keyword_data['volume'] is not None else 0
 
         best_cluster = None
-        highest_similarity = 0.5
+        highest_similarity = 0.5  # Seuil de similarité initial
 
         for cluster in clusters:
             similarity = calculate_similarity(cluster['urls'], urls)
@@ -128,14 +128,14 @@ def cluster_keywords(keywords_responses):
 
         if best_cluster:
             print(f"Clustering '{keyword}' avec '{best_cluster['name']}' ({highest_similarity * 100:.2f}% similaire)")
-            best_cluster['keywords'].append((keyword, highest_similarity))
+            best_cluster['keywords'].append({"keyword": keyword, "volume": volume, "similarity": highest_similarity})
             best_cluster['total_volume'] += volume
             best_cluster['urls'] = union(best_cluster['urls'], urls)
         else:
             print(f"Création d'un nouveau cluster pour '{keyword}'")
             clusters.append({
                 'name': keyword,
-                'keywords': [(keyword, 1.0)],
+                'keywords': [{"keyword": keyword, "volume": volume, "similarity": 1.0}],
                 'total_volume': volume,
                 'urls': urls
             })

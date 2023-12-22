@@ -143,7 +143,8 @@
     align-items: center;
     margin-bottom: 20px; /* Ajustez selon vos besoins */
     width: 100%;
-    margin : 5%;
+    margin : 3%;
+    text-align: center;
 } 
 
 .title{
@@ -184,18 +185,18 @@
                 <tbody>
                     {% for keyword_data in cluster.keywords %}
                     <tr>
-                        <td colspan="3">{{ keyword_data[0] }}</td>
-                        <td>{{ volume }}</td>
+                        <td colspan="3">{{ keyword_data.keyword }}</td>
+                        <td>{{ keyword_data.volume }}</td>
                         <td>
-                            {% if keyword_data[2] is defined %}
-                                {{ keyword_data[2] * 100 | round(2) }} %
+                            {% if keyword_data.similarity is defined %}
+                                {{ keyword_data.similarity * 100 | round(2) }} %
                             {% else %}
                                 N/A
                             {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
-                </tbody>
+                </tbody>                
                 <tfoot>
                     <tr class="total-row">
                         <td colspan="4">Total</td>
