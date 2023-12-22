@@ -54,12 +54,8 @@ async def read_item(request: Request):
 
 @app.get("/export_csv")
 async def export_csv():
-    cluster_data = get_cluster_data()
-    
-    # Assurez-vous que 'cluster_data' est dans le format attendu par 'cluster_keywords'
-    clusters = cluster_keywords(cluster_data)
+    clusters = cluster_keywords(...)  # Obtenez vos données de cluster ici
     csv_string = create_csv_string(clusters)
-    
     return Response(content=csv_string, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=clusters.csv"})
 
 @app.post("/search_volume", response_class=HTMLResponse)
@@ -112,7 +108,6 @@ async def search_volume(request: Request, keywords: str = Form(...), location_co
         print(f"  Volume total: {cluster['total_volume']}")
 
     # Passez les résultats de clustering au modèle HTML
-    print("Résultats du clustering :", cluster_results)
     return templates.TemplateResponse("resultat.html", {"request": request, "clusters": cluster_results})
 
 def cluster_keywords(keywords_responses):
