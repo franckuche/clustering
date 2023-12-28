@@ -1,15 +1,15 @@
 import re
-from fastapi import FastAPI, Form, Request, HTTPException
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
-from client import RestClient
-import os
+import io
+import csv
 import json
 import asyncio
-import csv
-
+import os
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import RedirectResponse, HTMLResponse, Response  # Ajoutez 'Response' ici si nécessaire
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from dotenv import load_dotenv
+from client import RestClient
 
 app = FastAPI()
 
@@ -20,6 +20,8 @@ load_dotenv()
 dataforseo_username = os.getenv('DATAFORSEO_USERNAME')
 dataforseo_password = os.getenv('DATAFORSEO_PASSWORD')
 dataforseo_client = RestClient(dataforseo_username, dataforseo_password)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Charger les données de locations.json
 json_file_path = 'data/locations.json'
@@ -44,6 +46,10 @@ def clean_and_split_keywords(keywords: str):
     """
     return [keyword.strip() for keyword in re.split(r',|\r\n|\r|\n', keywords) if keyword.strip()]
 
+# Variable globale pour stocker les données des clusters
+global_clusters_data = []
+
+
 @app.get("/")
 async def redirect_to_clustering():
     return RedirectResponse(url="/clustering/")
@@ -54,12 +60,14 @@ async def read_item(request: Request):
 
 @app.get("/export_csv")
 async def export_csv():
-    clusters = cluster_keywords(...)  # Obtenez vos données de cluster ici
-    csv_string = create_csv_string(clusters)
+    global global_clusters_data
+    print(f"Export des données des clusters: {global_clusters_data}")
+    csv_string = create_csv_string(global_clusters_data)
     return Response(content=csv_string, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=clusters.csv"})
 
 @app.post("/search_volume", response_class=HTMLResponse)
-async def search_volume(request: Request, keywords: str = Form(...), location_code: int = Form(...), max_crawl_pages: int = Form(...)):
+async def search_volume(request: Request, keywords: str = Form(...), location_code: int = Form(...), max_crawl_pages: int = Form(...), similarity_threshold: float = Form(50)):
+    print(f"Requête reçue - Mots-clés: {keywords}, Location: {location_code}, ...")
     keywords_list = clean_and_split_keywords(keywords)
 
     keyword_responses = []
@@ -74,6 +82,7 @@ async def search_volume(request: Request, keywords: str = Form(...), location_co
             search_volume_response = dataforseo_client.post("/v3/keywords_data/google_ads/search_volume/live", search_volume_data)
             # Extraire le volume de recherche global
             volume = search_volume_response['tasks'][0]['result'][0]['search_volume']
+            print(f"Volume de recherche pour {keyword}: {volume}")
         except Exception as e:
             print(f"Erreur lors de la récupération du volume de recherche pour {keyword}: {e}")
             continue
@@ -96,21 +105,25 @@ async def search_volume(request: Request, keywords: str = Form(...), location_co
             print(f"Erreur SERP pour {keyword}: {e}")
 
         await asyncio.sleep(2.5)
+        
+    cluster_results = cluster_keywords(keyword_responses, similarity_threshold)
+    print("Résultats du clustering:")
 
-    cluster_results = cluster_keywords(keyword_responses)
+    global global_clusters_data
+    global_clusters_data = cluster_results
 
     # Imprimez la structure des résultats de clustering pour le débogage
     print("Résultats du clustering :")
     for cluster in cluster_results:
-        print(f"Cluster: {cluster['name']}")
-        for keyword_data in cluster['keywords']:
-            print(f"  Mot-clé: {keyword_data['keyword']}, Volume: {keyword_data['volume']}, Similarité: {keyword_data['similarity'] * 100:.2f}%")
-            print(f"  Volume total: {cluster['total_volume']}")
+            print(f"Cluster: {cluster['name']}, Total Volume: {cluster['total_volume']}, Keywords: {[k['keyword'] for k in cluster['keywords']]}")
+            for keyword_data in cluster['keywords']:
+                print(f"  Mot-clé: {keyword_data['keyword']}, Volume: {keyword_data['volume']}, Similarité: {keyword_data['similarity'] * 100:.2f}%")
+                print(f"  Volume total: {cluster['total_volume']}")
 
     # Passez les résultats de clustering au modèle HTML
     return templates.TemplateResponse("resultat.html", {"request": request, "clusters": cluster_results})
 
-def cluster_keywords(keyword_responses):
+def cluster_keywords(keyword_responses, similarity_threshold):
     clusters = []
     for keyword_data in keyword_responses:
         keyword = keyword_data['keyword']
@@ -118,13 +131,14 @@ def cluster_keywords(keyword_responses):
         volume = keyword_data['volume'] if keyword_data['volume'] is not None else 0
 
         best_cluster = None
-        highest_similarity = 0.5  # Seuil de similarité initial
+        highest_similarity = 0.5  # Valeur de similarité initiale par défaut
 
         for cluster in clusters:
             similarity = calculate_similarity(cluster['urls'], urls)
             if similarity > highest_similarity:
-                best_cluster = cluster
                 highest_similarity = similarity
+                if similarity >= similarity_threshold / 100:  # Convertir le seuil en proportion
+                    best_cluster = cluster
 
         if best_cluster:
             print(f"Clustering '{keyword}' avec '{best_cluster['name']}' ({highest_similarity * 100:.2f}% similaire)")
@@ -135,31 +149,4 @@ def cluster_keywords(keyword_responses):
             print(f"Création d'un nouveau cluster pour '{keyword}'")
             clusters.append({
                 'name': keyword,
-                'keywords': [{"keyword": keyword, "volume": volume, "similarity": 1.0}],
-                'total_volume': volume,
-                'urls': urls
-            })
-
-    return clusters
-
-def calculate_similarity(urls1, urls2):
-    common_urls = set(urls1) & set(urls2)
-    unique_urls = set(urls1) | set(urls2)
-    return len(common_urls) / len(unique_urls) if unique_urls else 0
-
-def union(list1, list2):
-    return list(set(list1) | set(list2))
-
-def create_csv_string(clusters):
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # Écrire l'en-tête
-    writer.writerow(["Cluster", "Mot-clé", "Volume", "Similarité"])
-
-    # Écrire les données
-    for cluster in clusters:
-        for keyword_data in cluster['keywords']:
-            writer.writerow([cluster['name'], keyword_data[0], cluster['total_volume'], keyword_data[1]])
-
-    return output.getvalue()
+                'keywords': [{"keyword": keyword, "volu
