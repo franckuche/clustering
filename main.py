@@ -149,4 +149,30 @@ def cluster_keywords(keyword_responses, similarity_threshold):
             print(f"Création d'un nouveau cluster pour '{keyword}'")
             clusters.append({
                 'name': keyword,
-                'keywords': [{"keyword": keyword, "volu
+                'keywords': [{"keyword": keyword, "volume": volume, "similarity": 1.0}],
+                'total_volume': volume,
+                'urls': urls
+            })
+
+    return clusters
+
+def calculate_similarity(urls1, urls2):
+    common_urls = set(urls1) & set(urls2)
+    unique_urls = set(urls1) | set(urls2)
+    return len(common_urls) / len(unique_urls) if unique_urls else 0
+
+def union(list1, list2):
+    return list(set(list1) | set(list2))
+
+def create_csv_string(clusters):
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Écrire l'en-tête
+    writer.writerow(["Cluster", "Volume"])
+
+    # Écrire les données des clusters
+    for cluster in clusters:
+        writer.writerow([cluster['name'], cluster['total_volume']])
+
+    return output.getvalue()
