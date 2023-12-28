@@ -6,3 +6,6 @@ __pycache__
 
 # Ignore virtual environment directory (if you have one)
 venv/
+
+# Ignore le fichier auth.py
+auth.py

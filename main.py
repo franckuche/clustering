@@ -4,12 +4,14 @@ import csv
 import json
 import asyncio
 import os
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse, Response  # Ajoutez 'Response' ici si nécessaire
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
 from client import RestClient
+from auth import authenticate_user
+
 
 app = FastAPI()
 
@@ -55,18 +57,18 @@ async def redirect_to_clustering():
     return RedirectResponse(url="/clustering/")
 
 @app.get("/clustering/")
-async def read_item(request: Request):
+async def read_item(request: Request, username: str = Depends(authenticate_user)):
     return templates.TemplateResponse("clustering.html", {"request": request, "locations": locations_data})
 
 @app.get("/export_csv")
-async def export_csv():
+async def export_csv(username: str = Depends(authenticate_user)):
     global global_clusters_data
     print(f"Export des données des clusters: {global_clusters_data}")
     csv_string = create_csv_string(global_clusters_data)
     return Response(content=csv_string, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=clusters.csv"})
 
 @app.post("/search_volume", response_class=HTMLResponse)
-async def search_volume(request: Request, keywords: str = Form(...), location_code: int = Form(...), max_crawl_pages: int = Form(...), similarity_threshold: float = Form(50)):
+async def search_volume(request: Request, keywords: str = Form(...), location_code: int = Form(...), max_crawl_pages: int = Form(...), similarity_threshold: float = Form(50), username: str = Depends(authenticate_user)):
     print(f"Requête reçue - Mots-clés: {keywords}, Location: {location_code}, ...")
     keywords_list = clean_and_split_keywords(keywords)
 
@@ -169,10 +171,4 @@ def create_csv_string(clusters):
     writer = csv.writer(output)
 
     # Écrire l'en-tête
-    writer.writerow(["Cluster", "Volume"])
-
-    # Écrire les données des clusters
-    for cluster in clusters:
-        writer.writerow([cluster['name'], cluster['total_volume']])
-
-    return output.getvalue()
+    writer.writerow(["Cluster", "Vo
