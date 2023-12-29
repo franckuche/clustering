@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mots-clés et leur volume de recherche</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mots-clés et leur volume de recherche</h1>
+    <table>
+        <tr>
+            <th>Mot-clé</th>
+            <th>Volume de Recherche</th>
+            <th>Indice de Concurrence</th>
+            <th>Enchère Min pour Première Page</th>
+            <th>Enchère Max pour Première Page</th>
+            <th>CPC</th>
+        </tr>
+        {% for keyword in keyword_data %}
+            <tr>
+                <td>{{ keyword.keyword }}</td>
+                <td>{{ keyword.search_volume }}</td>
+                <td>{{ keyword.competition_index }}</td>
+                <td>{{ keyword.low_top_of_page_bid }}</td>
+                <td>{{ keyword.high_top_of_page_bid }}</td>
+                <td>{{ keyword.cpc }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

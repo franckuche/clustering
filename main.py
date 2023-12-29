@@ -171,4 +171,10 @@ def create_csv_string(clusters):
     writer = csv.writer(output)
 
     # Écrire l'en-tête
-    writer.writerow(["Cluster", "Vo
+    writer.writerow(["Cluster", "Volume"])
+
+    # Écrire les données des clusters
+    for cluster in clusters:
+        writer.writerow([cluster['name'], cluster['total_volume']])
+
+    return output.getvalue()
