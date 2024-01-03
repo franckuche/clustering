@@ -127,6 +127,8 @@ async def search_volume(request: Request, keywords: str = Form(...), location_co
 
 def cluster_keywords(keyword_responses, similarity_threshold):
     clusters = []
+
+    # Boucle pour créer les clusters
     for keyword_data in keyword_responses:
         keyword = keyword_data['keyword']
         urls = keyword_data['urls']
@@ -135,33 +137,65 @@ def cluster_keywords(keyword_responses, similarity_threshold):
         best_cluster = None
         highest_similarity = 0.5  # Valeur de similarité initiale par défaut
 
+        # Trouver le meilleur cluster pour ce mot-clé
         for cluster in clusters:
-            similarity = calculate_similarity(cluster['urls'], urls)
+            common_urls, similarity = calculate_similarity(cluster['urls'], urls)
             if similarity > highest_similarity:
                 highest_similarity = similarity
-                if similarity >= similarity_threshold / 100:  # Convertir le seuil en proportion
+                if similarity >= similarity_threshold / 100:
                     best_cluster = cluster
 
+        # Ajouter le mot-clé au meilleur cluster ou créer un nouveau cluster
         if best_cluster:
-            print(f"Clustering '{keyword}' avec '{best_cluster['name']}' ({highest_similarity * 100:.2f}% similaire)")
-            best_cluster['keywords'].append({"keyword": keyword, "volume": volume, "similarity": highest_similarity})
+            best_cluster['keywords'].append({"keyword": keyword, "volume": volume, "urls": urls, "similarity": highest_similarity})
             best_cluster['total_volume'] += volume
             best_cluster['urls'] = union(best_cluster['urls'], urls)
         else:
-            print(f"Création d'un nouveau cluster pour '{keyword}'")
             clusters.append({
                 'name': keyword,
-                'keywords': [{"keyword": keyword, "volume": volume, "similarity": 1.0}],
+                'keywords': [{"keyword": keyword, "volume": volume, "similarity": 1.0, "urls": urls}],
                 'total_volume': volume,
                 'urls': urls
             })
+
+    # Calculer les URLs similaires pour chaque cluster
+    for cluster in clusters:
+        # Assurez-vous que le cluster contient des mots-clés
+        if not cluster['keywords']:
+            continue
+
+        # Déterminer le mot-clé principal (exemple : le mot-clé avec le plus grand volume)
+        principal_keyword = max(cluster['keywords'], key=lambda x: x.get('volume', 0))
+
+        # Assurez-vous que le mot-clé principal a des URLs
+        if 'urls' not in principal_keyword:
+            continue
+
+        principal_urls = set(principal_keyword['urls'])
+
+        # Ajouter les URLs similaires à chaque mot-clé dans le cluster
+        for keyword in cluster['keywords']:
+            if 'urls' in keyword:
+                similar_urls = principal_urls & set(keyword['urls'])
+                keyword['similar_urls'] = list(similar_urls)
+                print(f"URLs similaires pour le mot-clé '{keyword['keyword']}': {keyword['similar_urls']}")
+
 
     return clusters
 
 def calculate_similarity(urls1, urls2):
     common_urls = set(urls1) & set(urls2)
-    unique_urls = set(urls1) | set(urls2)
-    return len(common_urls) / len(unique_urls) if unique_urls else 0
+    similarity = len(common_urls) / len(set(urls1) | set(urls2)) if urls1 and urls2 else 0
+    return common_urls, similarity
+
+def union(list1, list2):
+    return list(set(list1) | set(list2))
+
+
+def calculate_similarity(urls1, urls2):
+    common_urls = set(urls1) & set(urls2)
+    similarity = len(common_urls) / len(set(urls1) | set(urls2)) if urls1 and urls2 else 0
+    return common_urls, similarity
 
 def union(list1, list2):
     return list(set(list1) | set(list2))
@@ -178,3 +212,13 @@ def create_csv_string(clusters):
         writer.writerow([cluster['name'], cluster['total_volume']])
 
     return output.getvalue()
+
+@app.get("/resultat/detail/{cluster_index}")
+async def cluster_detail(request: Request, cluster_index: int, username: str = Depends(authenticate_user)):
+    global global_clusters_data
+    if cluster_index < len(global_clusters_data):
+        cluster = global_clusters_data[cluster_index]
+        print(f"Données du cluster {cluster_index}: {cluster}")  # Débogage
+        return templates.TemplateResponse("cluster_detail.html", {"request": request, "cluster": cluster})
+    else:
+        return RedirectResponse(url="/clustering/")

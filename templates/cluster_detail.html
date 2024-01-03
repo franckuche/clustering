@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="title-container">
+        <h1 class="title">Détail du Cluster</h1>
+    </div>
+    <div class="full-width-table-box">
+        <table>
+            <thead>
+                <tr>
+                    <th class="keyword">Mot-clé</th>
+                    <th class="volume">Volume de Recherche</th>
+                    <th>URLs découvertes</th>
+                    <th>URLs similaires au mot-clé principal</th>
+                    <th>% de similarité avec le mot-clé principal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for keyword in cluster.keywords %}
+                    <tr>
+                        <td class="keyword">{{ keyword.keyword }}</td>
+                        <td class="volume">{{ keyword.volume }}</td>
+                        <td>
+                            <ol>
+                            {% for url in keyword.urls %}
+                                <li>{{ url }}</li>
+                            {% endfor %}
+                            </ol>
+                        </td>                
+                        <td>
+                            <ol>
+                                {% for similar_url in keyword.similar_urls %}
+                                    <li>{{ similar_url }}</li>
+                                {% endfor %}
+                            </ol>
+                        </td>        
+                        <td>{{ keyword.similarity * 100 | round(2) }} %</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

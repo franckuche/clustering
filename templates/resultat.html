@@ -29,7 +29,7 @@
             </div>
         </div>
         {% for cluster in clusters %}
-        <div class="table-box">
+        <div class="table-box full-width-table">
             <p>Cluster {{ loop.index }} : {{ cluster.name.capitalize() }}</p>
             <table>
                 <thead>
@@ -62,11 +62,21 @@
                 </tfoot>
             </table>
             <div class="center-button">
-                <!--<button><a href="/resultat/detail/{{ loop.index }}"
-                        style="text-decoration: none; color: inherit;">Voir Détail</a></button>-->
+                <a href="/resultat/detail/{{ loop.index0 }}" style="text-decoration: none; display: block;
+                color: #fff;
+                background-color: #546E7A;
+                padding: 10px;
+                margin-top: 5%;
+                border-radius: 5px;
+                font-size: 16px;
+                text-align: center;
+                border: none;
+                cursor: pointer;
+                transition: background-color 0.3s ease;" class="button-link">Voir Détail</a>
             </div>
         </div>
         {% endfor %}
     </div>
 </body>
 </html>
+
